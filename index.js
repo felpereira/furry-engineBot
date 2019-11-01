@@ -1,100 +1,172 @@
 const Discord = require("discord.js");
+const schedule = require("node-schedule");
+
 const client = new Discord.Client();
 
-var TinyDB = require("tinydb");
-const agenda = new TinyDB("./db.json");
+const fs = require("fs");
+let db = JSON.parse(fs.readFileSync("db.json", "utf8"));
 
-var cron = require("node-cron");
+const geraIDUnico = () => {
+  return (
+    "_" +
+    Math.random()
+      .toString(36)
+      .substr(2, 9)
+  );
+};
 
-IniciarTimer();
+const formataDados = (dados, data, msgn) => {
+  return {
+    dados: {
+      idAutor: dados.author.id,
+      nomeCanal: dados.channel.name
+    },
+    textoOriginal: dados.content,
+    dataAgendada: data,
+    mensagemFormatada: msgn,
+    identificador: geraIDUnico()
+  };
+};
 
-function IniciarTimer() {
-  //const channel = client.channels.find('name', 'financeiro');
-  //channel.send(message);
-}
+const salvaDb = dados => {
+  db.push(dados);
+  fs.writeFile("./db.json", JSON.stringify(db), () => {});
+};
 
-function CarregarAlertas() {}
+const removeDb = idAlvo => {
+  const alvo = db.filter(el => {
+    return el.identificador === idAlvo;
+  });
 
-function EnviarMensgemCanal(mensagem, canal) {
-  console.log("teste");
+  db.splice(db.indexOf(alvo[0]), 1);
+  fs.writeFile("./db.json", JSON.stringify(db), () => {});
+};
 
-  var channel = client.channels.find("name", canal);
+const EnviarMensagemCanal = (mensagem, canal) => {
+  const channel = client.channels.find("name", canal);
   channel.send(mensagem);
-}
+};
 
-function Relogio() {}
+const enviaLembreteGenerico = dados => {
+  const job = schedule.scheduleJob(
+    new Date(dados.dataAgendada),
+    function() {
+      EnviarMensagemCanal(
+        `<@${dados.dados.idAutor}>, lembrete: ${dados.mensagemFormatada}`,
+        dados.dados.nomeCanal
+      );
+      job.cancel();
+      removeDb(dados.identificador);
+    }.bind(null, dados)
+  );
+};
 
-function isNumber(n) {
-  return !isNaN(parseFloat(n)) && isFinite(n);
-}
+const respondeAviso = (dados, mensagem = "agenda criada!") => {
+  const mensagemAEnviar = `<@${dados.dados.idAutor}>, ${mensagem}`;
+  const canal = dados.dados.nomeCanal;
+  EnviarMensagemCanal(mensagemAEnviar, canal);
+};
 
-function consistenciaAgenda(novaAgenda, callback) {
-  console.log("aqui");
-  if (novaAgenda.mensagem.lenght <= 0) {
-    return callback("Mensagem Vazia");
+const consistenciaAgenda = (dados, callback) => {
+  if (dados.mensagemFormatada <= 0) {
+    return callback("Mensagem Vazia!");
   }
 
-  if (
-    !isNumber(novaAgenda.dia) ||
-    (novaAgenda.dia < 1 && novaAgenda.dia > 31)
-  ) {
-    console.log("aqui");
-    return callback("Dia invalido");
-  }
-  if (
-    !isNumber(novaAgenda.mes) ||
-    (novaAgenda.mes < 1 && novaAgenda.mes > 12)
-  ) {
-    return callback("Mês invalido");
-  }
-  if (!isNumber(novaAgenda.mes) || novaAgenda.ano < 2017) {
-    return callback("Esse ano ja passou");
+  const agora = new Date();
+
+  if (dados.dataAgendada <= agora) {
+    return callback("Essa data já passou!");
   }
 
-  return callback("");
-}
+  if (typeof dados.dataAgendada === "string") {
+    return callback("Data inválida!");
+  }
+
+  return callback();
+};
+
+const comandoDaqui = mensagem => {
+  // !daqui xmins yhrs zdias <mensagem>
+  //tanto faz a ordem dos indicadores de tempo
+  let msgn = mensagem.textoOriginal
+    .replace("!daqui ", "")
+    .replace("min", "¨$%%¨")
+    .replace("hrs", "¨#@*¨")
+    .replace("dias", "¨_)@¨")
+    .split("¨");
+
+  const mins = msgn[msgn.indexOf("$%%") - 1]
+    ? msgn[msgn.indexOf("$%%") - 1]
+    : 0;
+  const dias = msgn[msgn.indexOf("_)@") - 1]
+    ? msgn[msgn.indexOf("_)@") - 1]
+    : 0;
+  const horas = msgn[msgn.indexOf("#@*") - 1]
+    ? msgn[msgn.indexOf("#@*") - 1]
+    : 0;
+  mensagem.mensagemFormatada = msgn[msgn.length - 1].trim();
+
+  const hoje = new Date();
+
+  hoje.setDate(hoje.getDate() + Number(dias));
+  hoje.setHours(hoje.getHours() + Number(horas));
+  hoje.setMinutes(hoje.getMinutes() + Number(mins));
+
+  mensagem.dataAgendada = hoje;
+
+  consistenciaAgenda(mensagem, mensagemRetorno => {
+    if (mensagemRetorno) {
+      respondeAviso(mensagem, mensagemRetorno);
+    } else {
+      enviaLembreteGenerico(mensagem);
+      respondeAviso(mensagem);
+      salvaDb(mensagem);
+    }
+  });
+};
+
+const comandoAgenda = mensagem => {
+  // !agenda mensagem/hora/dia/mes/ano/canal?
+  [msgn, hora, dia, mes, ano, canal] = mensagem.textoOriginal
+    .substring(8)
+    .split("/");
+  [horas, minutos] = hora.split(":");
+
+  const dataAgendada = new Date(ano, --mes, dia, horas, minutos);
+
+  mensagem.dataAgendada = dataAgendada;
+  mensagem.mensagemFormatada = msgn;
+
+  consistenciaAgenda(mensagem, mensagemRetorno => {
+    if (mensagemRetorno) {
+      respondeAviso(mensagem, mensagemRetorno);
+    } else {
+      enviaLembreteGenerico(mensagem);
+      respondeAviso(mensagem);
+      salvaDb(mensagem);
+    }
+  });
+};
 
 client.on("ready", () => {
   console.log(`Logged in as ${client.user.tag}!`);
 });
 
 client.on("message", msg => {
-  let mensagem = msg.content;
-
-  if (mensagem.startsWith("!")) {
-    // !agenda mensagem/dia/mes/ano/hora/canal?
-
-    if (mensagem.startsWith("!agenda ")) {
-      mensagem = mensagem.substring(8).split("/");
-
-      novaAgenda = {
-        mensagem: mensagem[0],
-        dia: mensagem[1],
-        mes: mensagem[2],
-        ano: mensagem[3],
-        hora: mensagem[4],
-        canal: mensagem[5],
-      };
-      consistenciaAgenda(novaAgenda, mensagemRetorno => {
-        if (mensagemRetorno) {
-          msg.reply(mensagemRetorno);
-        } else {
-          agenda.appendItem(novaAgenda, (teste, novaAgenda, testt) => {
-            console.log(novaAgenda);
-            const hora = novaAgenda.hora.split(":");
-            const stringAgenda = hora[1] + ' ' + hora[0] + ' ' + novaAgenda.dia + ' ' + novaAgenda.mes + ' *';
-
-            cron.schedule(
-              stringAgenda,
-              EnviarMensgemCanal(novaAgenda.mensagem, novaAgenda.canal),
-            );
-
-            msg.reply("Agenda criada");
-          });
-        }
-      });
+  if (msg.content.startsWith("!")) {
+    msg = formataDados(msg);
+    if (msg.textoOriginal.startsWith("!daqui ")) {
+      comandoDaqui(msg);
+    } else if (msg.textoOriginal.startsWith("!agenda ")) {
+      comandoAgenda(msg);
     }
   }
 });
 
-client.login("");
+client.login("NjM4NzM4MjE2MjM2NzQ0NzI1.XbhNmQ.vQvznzHsUY3YG7r-4-HRfIdhPQQ");
+
+(function() {
+  db.forEach(el => {
+    enviaLembreteGenerico(el);
+  });
+})();
