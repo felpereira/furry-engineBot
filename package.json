@@ -1,6 +1,6 @@
 {
-  "name": "TiBot",
-  "version": "0.0.0",
+  "name": "FuryBot",
+  "version": "0.0.1",
   "main": "index.js",
   "license": "MIT",
   "scripts": {
