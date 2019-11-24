@@ -1,21 +1,19 @@
 const Discord = require("discord.js");
 const schedule = require("node-schedule");
-
 const client = new Discord.Client();
-
 const fs = require("fs");
-let db = JSON.parse(fs.readFileSync("db.json", "utf8"));
+let bancoDadosAgenda = JSON.parse(fs.readFileSync("db.json", "utf8"));
 
-const geraIDUnico = () => {
+const gerarIdUnico = () => {
   return (
     "_" +
     Math.random()
-      .toString(36)
-      .substr(2, 9)
+    .toString(36)
+    .substr(2, 9)
   );
 };
 
-const formataDados = (dados, data, msgn) => {
+const formatarDados = (dados, data, msgn) => {
   return {
     dados: {
       idAutor: dados.author.id,
@@ -24,50 +22,50 @@ const formataDados = (dados, data, msgn) => {
     textoOriginal: dados.content,
     dataAgendada: data,
     mensagemFormatada: msgn,
-    identificador: geraIDUnico()
+    identificador: gerarIdUnico()
   };
 };
 
-const salvaDb = dados => {
-  db.push(dados);
-  fs.writeFile("./db.json", JSON.stringify(db), () => {});
+const salvarAgendaLocal = dados => {
+  bancoDadosAgenda.push(dados);
+  fs.writeFile("./db.json", JSON.stringify(bancoDadosAgenda), () => {});
 };
 
-const removeDb = idAlvo => {
-  const alvo = db.filter(el => {
+const removerAgendaLocal = idAlvo => {
+  const alvo = bancoDadosAgenda.filter(el => {
     return el.identificador === idAlvo;
   });
 
-  db.splice(db.indexOf(alvo[0]), 1);
-  fs.writeFile("./db.json", JSON.stringify(db), () => {});
+  bancoDadosAgenda.splice(bancoDadosAgenda.indexOf(alvo[0]), 1);
+  fs.writeFile("./db.json", JSON.stringify(bancoDadosAgenda), () => {});
 };
 
-const EnviarMensagemCanal = (mensagem, canal) => {
+const enviarMensagemCanal = (mensagem, canal) => {
   const channel = client.channels.find("name", canal);
   channel.send(mensagem);
 };
 
-const enviaLembreteGenerico = dados => {
+const agendarMensagen = dados => {
   const job = schedule.scheduleJob(
     new Date(dados.dataAgendada),
-    function() {
-      EnviarMensagemCanal(
+    function () {
+      enviarMensagemCanal(
         `<@${dados.dados.idAutor}>, lembrete: ${dados.mensagemFormatada}`,
         dados.dados.nomeCanal
       );
       job.cancel();
-      removeDb(dados.identificador);
+      removerAgendaLocal(dados.identificador);
     }.bind(null, dados)
   );
 };
 
-const respondeAviso = (dados, mensagem = "agenda criada!") => {
+const responderAviso = (dados, mensagem = "agenda criada!") => {
   const mensagemAEnviar = `<@${dados.dados.idAutor}>, ${mensagem}`;
   const canal = dados.dados.nomeCanal;
-  EnviarMensagemCanal(mensagemAEnviar, canal);
+  enviarMensagemCanal(mensagemAEnviar, canal);
 };
 
-const consistenciaAgenda = (dados, callback) => {
+const consistirAgenda = (dados, callback) => {
   if (dados.mensagemFormatada <= 0) {
     return callback("Mensagem Vazia!");
   }
@@ -85,7 +83,7 @@ const consistenciaAgenda = (dados, callback) => {
   return callback();
 };
 
-const comandoDaqui = mensagem => {
+const executarComandoDaqui = mensagem => {
   // !daqui xmins yhrs zdias <mensagem>
   //tanto faz a ordem dos indicadores de tempo
   let msgn = mensagem.textoOriginal
@@ -95,15 +93,15 @@ const comandoDaqui = mensagem => {
     .replace("dias", "¨_)@¨")
     .split("¨");
 
-  const mins = msgn[msgn.indexOf("$%%") - 1]
-    ? msgn[msgn.indexOf("$%%") - 1]
-    : 0;
-  const dias = msgn[msgn.indexOf("_)@") - 1]
-    ? msgn[msgn.indexOf("_)@") - 1]
-    : 0;
-  const horas = msgn[msgn.indexOf("#@*") - 1]
-    ? msgn[msgn.indexOf("#@*") - 1]
-    : 0;
+  const mins = msgn[msgn.indexOf("$%%") - 1] ?
+    msgn[msgn.indexOf("$%%") - 1] :
+    0;
+  const dias = msgn[msgn.indexOf("_)@") - 1] ?
+    msgn[msgn.indexOf("_)@") - 1] :
+    0;
+  const horas = msgn[msgn.indexOf("#@*") - 1] ?
+    msgn[msgn.indexOf("#@*") - 1] :
+    0;
   mensagem.mensagemFormatada = msgn[msgn.length - 1].trim();
 
   const hoje = new Date();
@@ -114,18 +112,18 @@ const comandoDaqui = mensagem => {
 
   mensagem.dataAgendada = hoje;
 
-  consistenciaAgenda(mensagem, mensagemRetorno => {
+  consistirAgenda(mensagem, mensagemRetorno => {
     if (mensagemRetorno) {
-      respondeAviso(mensagem, mensagemRetorno);
+      responderAviso(mensagem, mensagemRetorno);
     } else {
-      enviaLembreteGenerico(mensagem);
-      respondeAviso(mensagem);
-      salvaDb(mensagem);
+      agendarMensagen(mensagem);
+      responderAviso(mensagem);
+      salvarAgendaLocal(mensagem);
     }
   });
 };
 
-const comandoAgenda = mensagem => {
+const executarComandoAgenda = mensagem => {
   // !agenda mensagem/hora/dia/mes/ano/canal?
   [msgn, hora, dia, mes, ano, canal] = mensagem.textoOriginal
     .substring(8)
@@ -137,13 +135,13 @@ const comandoAgenda = mensagem => {
   mensagem.dataAgendada = dataAgendada;
   mensagem.mensagemFormatada = msgn;
 
-  consistenciaAgenda(mensagem, mensagemRetorno => {
+  consistirAgenda(mensagem, mensagemRetorno => {
     if (mensagemRetorno) {
-      respondeAviso(mensagem, mensagemRetorno);
+      responderAviso(mensagem, mensagemRetorno);
     } else {
-      enviaLembreteGenerico(mensagem);
-      respondeAviso(mensagem);
-      salvaDb(mensagem);
+      agendarMensagen(mensagem);
+      responderAviso(mensagem);
+      salvarAgendaLocal(mensagem);
     }
   });
 };
@@ -154,19 +152,19 @@ client.on("ready", () => {
 
 client.on("message", msg => {
   if (msg.content.startsWith("!")) {
-    msg = formataDados(msg);
+    msg = formatarDados(msg);
     if (msg.textoOriginal.startsWith("!daqui ")) {
-      comandoDaqui(msg);
+      executarComandoDaqui(msg);
     } else if (msg.textoOriginal.startsWith("!agenda ")) {
-      comandoAgenda(msg);
+      executarComandoAgenda(msg);
     }
   }
 });
 
-client.login("NjM4NzM4MjE2MjM2NzQ0NzI1.XbhNmQ.vQvznzHsUY3YG7r-4-HRfIdhPQQ");
+client.login("");
 
-(function() {
-  db.forEach(el => {
-    enviaLembreteGenerico(el);
+(function () {
+  bancoDadosAgenda.forEach(el => {
+    agendarMensagen(el);
   });
 })();
