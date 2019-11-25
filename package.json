@@ -1,17 +1,23 @@
 {
-  "name": "FuryBot",
-  "version": "0.0.1",
-  "main": "index.js",
-  "license": "MIT",
-  "scripts": {
-    "start": "nodemon index.js",
-    "dev": "node index.js"
-  },
-  "dependencies": {
-    "discord.js": "^11.5.1",
-    "node-schedule": "^1.3.2"
-  },
-  "devDependencies": {
-    "nodemon": "^1.19.2"
-  }
+	"name": "FuryBot",
+	"version": "0.0.1",
+	"main": "index.js",
+	"license": "MIT",
+	"scripts": {
+		"start": "nodemon index.js",
+		"dev": "nodemon src/index.js",
+		"dev:debug": "nodemon --inspect src/index.ts"
+	},
+	"dependencies": {
+		"discord.js": "^11.5.1",
+		"mongoose": "^5.7.12",
+		"node-schedule": "^1.3.2",
+		"ts-node": "^8.5.2",
+		"typescript": "^3.7.2"
+	},
+	"devDependencies": {
+		"@types/mongoose": "^5.5.32",
+		"@types/node": "^12.12.12",
+		"nodemon": "^1.19.4"
+	}
 }
