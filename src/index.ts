@@ -1,32 +1,15 @@
-const Discord = require('discord.js');
-//const schedule = require('node-schedule');
-//const client = Discord.client();
-const fs = require('fs');
-//let bancoDadosAgenda = JSON.parse(fs.readFileSync('db.json', 'utf8'));
-import { Banco } from './banco';
-import { Message } from 'discord.js';
-import { IMensagem } from './interfaces/mensagem';
-const conexao = new Banco();
+// const Discord = require('discord.js');
+// const schedule = require('node-schedule');
+// import { Banco } from './banco/banco';
+// import { Message, Client } from 'discord.js';
+// import { IMensagem } from './interfaces/mensagem';
+// const conexao = new Banco();
 
-const gerarIdUnico = (): string => {
-	return (
-		'_' +
-		Math.random()
-			.toString(36)
-			.substr(2, 9)
-	);
-};
+import { DiscordBot } from './discordBot/discordBot';
 
-const formatarDados = (dados: Message, data?: Date, msgn?: string): IMensagem => {
-	return {
-		idAutor: dados.author.id,
-		idCanal: dados.channel.id,
-		idMensagem: gerarIdUnico(),
-		mensagemOriginal: dados.content,
-		mensagemFormatada: msgn,
-		dataAgendada: data,
-	};
-};
+const teste = new DiscordBot();
+
+teste.start();
 
 // const salvarAgendaLocal = dados => {
 // 	bancoDadosAgenda.push(dados);

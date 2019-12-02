@@ -1,5 +1,7 @@
 import { Document, Schema, model } from 'mongoose';
 
+const TipoMensagemSchema = ['Agenda', 'Daqui', 'TodoDia'] as const;
+
 export interface IMensagem {
 	idAutor: string;
 	idCanal: string;
@@ -7,9 +9,10 @@ export interface IMensagem {
 	mensagemOriginal: string;
 	mensagemFormatada?: string;
 	dataAgendada?: Date;
+	tipo?: string;
 }
 
-export interface IMensagemModel extends IMensagem, Document {}
+interface IMensagemModel extends IMensagem, Document {}
 
 export const MensagemSchema = new Schema({
 	idAutor: { type: String, required: true },
@@ -18,6 +21,7 @@ export const MensagemSchema = new Schema({
 	mensagemOriginal: { type: String, required: true },
 	mensagemFormatada: String,
 	dataAgendada: Date,
+	tipo: { type: String, enum: TipoMensagemSchema },
 });
 
 const Mensagem = model<IMensagemModel>('mensagens', MensagemSchema);
