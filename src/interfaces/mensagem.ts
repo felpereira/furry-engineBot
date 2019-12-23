@@ -4,12 +4,13 @@ const TipoMensagemSchema = ['Agenda', 'Daqui', 'TodoDia'] as const;
 
 export interface IMensagem {
 	idAutor: string;
-	idCanal: string;
+	idCanalOriginal: string;
 	idMensagem: string;
 	mensagemOriginal: string;
 	mensagemFormatada?: string;
 	dataAgendada?: Date;
 	tipo?: string;
+	idCanalDestino?: string;
 }
 
 interface IMensagemModel extends IMensagem, Document {}
@@ -22,6 +23,7 @@ export const MensagemSchema = new Schema({
 	mensagemFormatada: String,
 	dataAgendada: Date,
 	tipo: { type: String, enum: TipoMensagemSchema },
+	idCanalDestino: String
 });
 
 const Mensagem = model<IMensagemModel>('mensagens', MensagemSchema);

@@ -1,35 +1,32 @@
-import { IMensagem } from '../interfaces/mensagem';
-import { consistirAgenda } from '../util';
+import { Mensagem } from '../discordBot/Mensagem';
+//import
 
-export default async function(mensagem: IMensagem) {
-	//Ex.: !agenda #canal "abcde #euamobatata 321" 20:45 em 2019/12/05
-	// comando
-	// <canal>
-	// <mensagem>
-	// <hora>
-	// (em) <data>
+//TODO agendar a mensagem
 
-	mensagem.tipo = 'Agenda';
+export const decodificarComandoAgenda = (mensagem: Mensagem): void => {
+	const { mensagemOriginal } = mensagem;
 
-	mensagem.mensagemFormatada = mensagem.mensagemOriginal.substring(
-		mensagem.mensagemOriginal.indexOf('"') + 1,
-		mensagem.mensagemOriginal.lastIndexOf('"')
+	mensagem.mensagemFormatada = mensagemOriginal.substring(
+		mensagemOriginal.indexOf('"') + 1,
+		mensagemOriginal.lastIndexOf('"')
 	);
 
-	mensagem.idCanal = mensagem.mensagemOriginal.substr(mensagem.mensagemOriginal.indexOf('#') + 1, 18);
+	const horario = mensagemOriginal.substr(mensagemOriginal.lastIndexOf(':') - 2, 5);
 
-	const horario = mensagem.mensagemOriginal.substr(mensagem.mensagemOriginal.lastIndexOf(':') - 2, 5);
-
-	const indexEm = mensagem.mensagemOriginal.lastIndexOf('em');
+	const indexEm = mensagemOriginal.lastIndexOf('em');
 	let data: string;
 
 	if (indexEm > 0) {
-		data = mensagem.mensagemOriginal.substr(indexEm + 3, 10);
+		data = mensagemOriginal.substr(indexEm + 3, 10);
 	} else {
 		data = new Date().getDate().toString();
 	}
 
 	mensagem.dataAgendada = new Date(`${horario} ${data} GMT-03:00`);
 
-	return await consistirAgenda(mensagem);
-}
+	mensagem.idCanalDestino = mensagemOriginal.substr(mensagemOriginal.indexOf('#') + 1, 18);
+
+	mensagem.tipo = 'Agenda';
+};
+
+export const agendar = (mensagem: Mensagem) => {};
